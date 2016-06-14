@@ -64,7 +64,7 @@ def in_queue(self):
             else:
                 return False
 
-        elif VASPRC['scheduler']=='SGE':
+        elif VASPRC['scheduler'] is 'SGE':
             # SGE does not print a list of jobids
             , stdout, = getstatusoutput('qstat',
                                         stdout=subprocess.PIPE,
@@ -79,7 +79,7 @@ def in_queue(self):
                 if status == 0:
                     return True
             else:
-                return False    
+                return False
 
 @monkeypatch_class(vasp.Vasp)
 def calculate(self, atoms=None, properties=['energy'],
