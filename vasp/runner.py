@@ -42,27 +42,44 @@ def in_queue(self):
     else:
         # get the jobid
         jobid = self.get_db('jobid')
-        # see if jobid is in queue
-        _, jobids_in_queue, _ = getstatusoutput('qselect',
-                                                stdout=subprocess.PIPE,
-                                                stderr=subprocess.PIPE)
+        if VASPRC['scheduler'] is 'PBS'
+            # see if jobid is in queue
+            _, jobids_in_queue, _ = getstatusoutput('qselect',
+                                                    stdout=subprocess.PIPE,
+                                                    stderr=subprocess.PIPE)
 
-        if str(jobid) in jobids_in_queue.split('\n'):
-            # get details on specific jobid in case it is complete
-            status, output, err = getstatusoutput(['qstat', jobid],
-                                                  stdout=subprocess.PIPE,
-                                                  stderr=subprocess.PIPE)
-            if status == 0:
-                lines = output.split('\n')
-                fields = lines[2].split()
-                job_status = fields[4]
-                if job_status == 'C':
-                    return False
-                else:
+            if str(jobid) in jobids_in_queue.split('\n'):
+                # get details on specific jobid in case it is complete
+                status, output, err = getstatusoutput(['qstat', jobid],
+                                                      stdout=subprocess.PIPE,
+                                                      stderr=subprocess.PIPE)
+                if status == 0:
+                    lines = output.split('\n')
+                    fields = lines[2].split()
+                    job_status = fields[4]
+                    if job_status == 'C':
+                        return False
+                    else:
+                        return True
+            else:
+                return False
+
+        elif VASPRC['scheduler']=='SGE':
+            # SGE does not print a list of jobids
+            , stdout, = getstatusoutput('qstat',
+                                        stdout=subprocess.PIPE,
+                                        stderr=subprocess.PIPE)
+            jobids_in_queue = [line.split()[0] for line in stdout.split('\n')[2:-1]]
+
+            if str(jobid) in jobids_in_queue:
+                status, output, error = getstatusoutput(['qstat', '-j', jobid],
+                                                        stdout=subprocess.PIPE,
+                                                        stderr=subprocess.PIPE)
+
+                if status == 0:
                     return True
-        else:
-            return False
-
+            else:
+                return False    
 
 @monkeypatch_class(vasp.Vasp)
 def calculate(self, atoms=None, properties=['energy'],
