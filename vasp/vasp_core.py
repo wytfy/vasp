@@ -13,7 +13,7 @@ import numpy as np
 import ase
 from ase.calculators.calculator import Calculator
 from ase.calculators.calculator import FileIOCalculator
-from ase.io.vasp import read_vasp_xml
+from ase.io import read
 
 # internal modules
 import exceptions
@@ -56,7 +56,7 @@ class Vasp(FileIOCalculator, object):
     $VASP_PP_PATH/potpaw_GGA
 
     """
-
+    version = "0.9.3"
     name = 'VASP'
     command = None
     debug = None
@@ -73,6 +73,7 @@ class Vasp(FileIOCalculator, object):
     # set the relevant vasp tags.
     xc_defaults = {'lda': {'pp': 'LDA'},
                    # GGAs
+                   'gga': {'pp': 'GGA'},
                    'pbe': {'pp': 'PBE'},
                    'revpbe': {'pp': 'LDA', 'gga': 'RE'},
                    'rpbe': {'pp': 'LDA', 'gga': 'RP'},
@@ -340,7 +341,7 @@ class Vasp(FileIOCalculator, object):
         ppp = []  # [(index_or_symbol, potcar_file, count)]
 
         # indices of original atoms needed to make sorted atoms list
-        resort_indices = []
+        sort_indices = []
 
         # First the numeric index setups
         for setup in [x for x in setups if isinstance(x[0], int)]:
@@ -348,16 +349,16 @@ class Vasp(FileIOCalculator, object):
                      'potpaw_{}/{}{}/POTCAR'.format(pp, atoms[setup[0]].symbol,
                                                     setup[1]),
                      1]]
-            resort_indices += [setup[0]]
+            sort_indices += [setup[0]]
 
         # now the rest of the setups. These are atom symbols
         for setup in [x for x in setups if not isinstance(x[0], int)]:
             symbol = setup[0]
             count = 0
             for i, atom in enumerate(atoms):
-                if atom.symbol == symbol and i not in resort_indices:
+                if atom.symbol == symbol and i not in sort_indices:
                     count += 1
-                    resort_indices += [i]
+                    sort_indices += [i]
 
             ppp += [[symbol,
                      'potpaw_{}/{}{}/POTCAR'.format(pp, symbol, setup[1]),
@@ -373,27 +374,56 @@ class Vasp(FileIOCalculator, object):
         for symbol in symbols:
             count = 0
             for i, atom in enumerate(atoms):
-                if atom.symbol == symbol and i not in resort_indices:
-                    resort_indices += [i]
+                if atom.symbol == symbol and i not in sort_indices:
+                    sort_indices += [i]
                     count += 1
             if count > 0:
                 ppp += [[symbol,
                          'potpaw_{}/{}/POTCAR'.format(pp, symbol),
                          count]]
 
-        assert len(resort_indices) == len(atoms), \
-            'Sorting error. sort_indices={}'.format(resort_indices)
+        assert len(sort_indices) == len(atoms), \
+            'Sorting error. sort_indices={}'.format(sort_indices)
 
         assert sum([x[2] for x in ppp]) == len(atoms)
+        self.sort = sort_indices
 
-        self.resort = resort_indices
+        # This list is used to convert Vasp ordering back to the
+        # user-defined order.
+        self.resort = [k[1] for k in
+                       sorted([[j, i] for i, j in enumerate(sort_indices)])]
+
+        # June 23, 2016. Jake Boes found a bug in how sorting is
+        # done. We fixed it, but the fix is not backwards compatible
+        # with the old resort we stored in DB.db. It appears we can
+        # detect an old case if there is inconsistency with what is
+        # stored and calculated here.  We check here to see if we are
+        # consistent, and if not fix the issue. This should only occur
+        # once.
+        if (self.resort is not None
+            and self.get_db('resort') is not None
+            and self.resort != list(self.get_db('resort'))):
+            ns =  [k[1] for k in
+                   sorted([[j, i]
+                           for i, j in enumerate(self.get_db('resort'))])]
+            from ase.db import connect
+            with connect(os.path.join(self.directory, 'DB.db')) as con:
+                tatoms = con.get_atoms(id=1)
+            self.write_db(atoms=tatoms, data={'resort': ns})
+            print('Fixed resort issue in {}. '
+                  'You should not see this message'
+                  ' again'.format(self.directory))
+            self.resort = ns
+            sort_indices = [k[1] for k in
+                            sorted([[j, i]
+                                    for i, j in enumerate(ns)])]
+
         self.ppp_list = ppp
-        self.atoms_sorted = atoms[self.resort]
+        self.atoms_sorted = atoms[sort_indices]
         self.symbol_count = [(x[0] if isinstance(x[0], str)
                               else atoms[x[0]].symbol,
                               x[2]) for x in ppp]
 
-        return atoms[self.resort]
 
     def _repr_html_(self):
         """Output function for Jupyter notebooks."""
@@ -424,8 +454,7 @@ class Vasp(FileIOCalculator, object):
               2. Implement convergence check?
 
         """
-        s = ['\n*************** VASP CALCULATION SUMMARY ***************']
-        s += ['Vasp calculation directory:']
+        s = ['\n', 'Vasp calculation directory:']
         s += ['---------------------------']
         s += ['  [[{self.directory}]]']
 
@@ -716,7 +745,10 @@ class Vasp(FileIOCalculator, object):
                 os.unlink(os.path.join(newdir, 'CONTCAR'))
 
             # eliminate jobid on copying.
-            self.write_db(jobid=None, path=newdir)
+            newdb = os.path.join(newdir, 'DB.db')
+            self.write_db(fname=newdb,
+                          data={'path': os.path.abspath(newdir),
+                                'jobid': None})
 
         self.__init__(newdir)
 
@@ -726,13 +758,14 @@ class Vasp(FileIOCalculator, object):
         Returns an integer for the state.
 
         """
-
+        # We do not check for KPOINTS here. That file may not exist if
+        # the kspacing incar parameter is used.
         base_input = [os.path.exists(os.path.join(self.directory, f))
-                      for f in ['INCAR', 'POSCAR', 'POTCAR', 'KPOINTS']]
+                       for f in ['INCAR', 'POSCAR', 'POTCAR']]
 
         # Check for NEB first.
         if (np.array([os.path.exists(os.path.join(self.directory, f))
-                      for f in ['INCAR', 'POTCAR', 'KPOINTS']]).all()
+                      for f in ['INCAR', 'POTCAR']]).all()
             and not os.path.exists(os.path.join(self.directory, 'POSCAR'))
             and os.path.isdir(os.path.join(self.directory, '00'))):
             return Vasp.NEB
@@ -807,7 +840,7 @@ class Vasp(FileIOCalculator, object):
         This reads Atoms objects from vasprun.xml. By default returns
         all images.  If index is an integer, return that image.
 
-        Technically, this is just a list of atoms with
+        Technically, this is just a list of atoms with a
         SinglePointCalculator attached to them.
 
         This is usually only relevant if you have done a
@@ -815,21 +848,23 @@ class Vasp(FileIOCalculator, object):
         returned.
 
         """
+        from ase.calculators.singlepoint import SinglePointCalculator as SPC
         self.update()
 
         if self.neb:
-            from ase.calculators.singlepoint import SinglePointCalculator
             images, energies = self.get_neb()
             tatoms = [x.copy() for x in images]
             for i, x in enumerate(tatoms):
-                x.set_calculator(SinglePointCalculator(x, energy=energies[i]))
+                x.set_calculator(SPC(x, energy=energies[i]))
             return tatoms
 
         LOA = []
-        for atoms in read_vasp_xml(os.path.join(self.directory,
-                                                'vasprun.xml'),
-                                   index=None):
-            LOA += [atoms]
+        for atoms in read(os.path.join(self.directory, 'vasprun.xml'), ':'):
+            catoms = atoms.copy()
+            catoms = catoms[self.resort]
+            catoms.set_calculator(SPC(catoms,
+                                      energy=atoms.get_potential_energy()))
+            LOA += [catoms]
         return LOA
 
     def view(self, index=None):

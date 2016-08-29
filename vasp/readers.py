@@ -8,7 +8,7 @@ from vasp import log
 from ase.calculators.calculator import Parameters
 import exceptions
 from monkeypatch import monkeypatch_class
-from ase.io.vasp import read_vasp_xml
+import ase
 
 
 def isfloat(s):
@@ -224,31 +224,33 @@ def read_potcar(self, fname=None):
 
 @monkeypatch_class(vasp.Vasp)
 def read_atoms(self):
-    """Read the atoms and resort if able."""
+    """Read the final atoms object from vasprun.xml
+    and return the user defined order (unsort) if able.
 
-    db = os.path.join(self.directory, 'DB.db')
-    try:
-        if os.path.exists(db):
-            from ase.db import connect
-            with connect(db) as con:
-                atoms = con.get_atoms(id=1)
-        else:
-            atoms = None
-    # This exception means no entry found
-    except KeyError:
-        atoms = None
+    """
+    atoms = None
+    resort = self.get_db('resort')
+    # for a new calculation resort will be None
+    if resort is not None:
+        resort = list(resort)
+        from ase.db import connect
+        with connect(os.path.join(self.directory, 'DB.db')) as con:
+            temp_atoms = con.get_atoms(id=1)
+            tags = temp_atoms.get_tags()
+    else:
+        tags = None
 
-    # update these from vasprun if finished. just in case.
-    if self.get_state() == 3:
-        log.debug('Reading final positions')
-        xatoms = read_vasp_xml(os.path.join(self.directory,
-                                            'vasprun.xml')).next()
-
-        resort = self.get_db('resort')
-        # update the atoms
-        atoms.positions = xatoms.positions[resort]
-        atoms.cell = xatoms.cell
-
+    vasprun_xml = os.path.join(self.directory,
+                               'vasprun.xml')
+    if os.path.exists(vasprun_xml):
+        atoms = ase.io.read(vasprun_xml)
+        atoms = atoms[resort]
+        atoms.set_tags(tags)
+    elif os.path.exists(os.path.join(self.directory, 'POSCAR')):
+        atoms = ase.io.read(os.path.join(self.directory,
+                                         'POSCAR'))
+        atoms = atoms[resort]
+        atoms.set_tags(tags)
     return atoms
 
 
@@ -321,6 +323,7 @@ def read(self, restart=None):
     # Now get the atoms
     atoms = self.read_atoms()
     self.atoms = atoms
+
     if atoms is not None and self.atoms is not None:
         # Update the self.atoms
         self.atoms.arrays['numbers'] = atoms.arrays['numbers']
@@ -356,22 +359,20 @@ def read_results(self):
             exc = 'No vasprun.xml in {}'.format(self.directory)
             raise exceptions.VaspNotFinished(exc)
 
-        atoms = read_vasp_xml(os.path.join(self.directory,
-                                           'vasprun.xml')).next()
+        # this has a single-point calculator on it. but no tags.
+        atoms = ase.io.read(os.path.join(self.directory,
+                                         'vasprun.xml'))
 
         energy = atoms.get_potential_energy()
         forces = atoms.get_forces()  # needs to be resorted
         stress = atoms.get_stress()
 
-        resort = self.get_db('resort')
         if self.atoms is None:
-            atoms = atoms[resort]
             self.sort_atoms(atoms)
-            self.atoms.set_calculator(self)
-        else:
-            # update the atoms
-            self.atoms.positions = atoms.positions[resort]
-            self.atoms.cell = atoms.cell
+
+        # Now we read the atoms, so that the tags are set.
+        self.atoms = self.read_atoms()
+        self.atoms.set_calculator(self)
 
         self.results['energy'] = energy
         self.results['forces'] = forces[self.resort]
@@ -405,7 +406,6 @@ def read_results(self):
 @monkeypatch_class(vasp.Vasp)
 def read_neb(self):
     """Read an NEB calculator."""
-    import ase
     import glob
     atoms = []
     atoms += [ase.io.read('{}/00/POSCAR'.format(self.directory))]

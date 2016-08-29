@@ -105,13 +105,13 @@ def get_neb(self, npi=1):
         # seem to be a way to do that short of cloning the whole
         # calculation into the end-point directories.
 
-        self.write_db(self.neb[0],
-                      os.path.join(self.directory,
-                                   '00/DB.db'))
+        self.write_db(os.path.join(self.directory,
+                                   '00/DB.db'),
+                      self.neb[0])
 
-        self.write_db(self.neb[-1],
-                      os.path.join(self.directory,
-                                   '0{}/DB.db'.format(len(self.neb) - 1)))
+        self.write_db(os.path.join(self.directory,
+                                   '0{}/DB.db'.format(len(self.neb) - 1)),
+                      self.neb[-1],)
 
         VASPRC['queue.ppn'] = npi * (len(self.neb) - 2)
         log.debug('Running on %i cores', VASPRC['queue.ppn'])
@@ -217,6 +217,10 @@ def read_neb_calculator():
     calc.read_incar()
     calc.read_kpoints()
 
+    if calc.in_queue():
+        return ([None for i in range(calc.int_params['images'] + 2)],
+                [None for i in range(calc.int_params['images'] + 2)])
+
     # set default functional
     # if both gga and xc are not specified
     if calc.string_params['gga'] is None:
@@ -255,13 +259,6 @@ def read_neb_calculator():
         os.chdir(cwd)
 
     log.debug('len(images) = %i', len(images))
-
-    f = open('00/energy')
-    calc.neb_initial_energy = float(f.readline().strip())
-    f.close()
-    f = open('{0}/energy'.format(str(len(images) - 1).zfill(2)))
-    calc.neb_final_energy = float(f.readline().strip())
-    f.close()
 
     calc.neb_images = images
     calc.neb_nimages = len(images) - 2

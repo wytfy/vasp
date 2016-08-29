@@ -98,14 +98,6 @@ def calculate(self, atoms=None, properties=['energy'],
         log.debug('mode is None. not running')
         return
 
-    # not in queue. Delete the jobid
-    if self.get_db('jobid') is not None:
-        self.write_db(jobid=None)
-
-        # we should check for errors here.
-        self.read_results()
-        return
-
     if (not self.calculation_required(atoms, ['energy'])
         and not self.check_state()):
         print('No calculation_required.')
@@ -225,7 +217,7 @@ runvasp.py     # this is the vasp command
     if out == '' or err != '':
         raise Exception('something went wrong in qsub:\n\n{0}'.format(err))
 
-    self.write_db(jobid=out.strip())
+    self.write_db(data={'jobid': out.strip()})
 
     raise VaspSubmitted('{} submitted: {}'.format(self.directory,
                                                   out.strip()))
@@ -282,7 +274,8 @@ def set_memory(self,
             FileIOCalculator.write_input(self, None, None, None)
             self.write_poscar()
             self.write_incar()
-            self.write_kpoints()
+            if 'kspacing' not in self.parameters:
+                self.write_kpoints()
             self.write_potcar()
 
             # Need to pass a function to Timer for delayed execution
