@@ -42,7 +42,7 @@ def in_queue(self):
     else:
         # get the jobid
         jobid = self.get_db('jobid')
-        if VASPRC['scheduler'] is 'PBS'
+        if VASPRC['scheduler'] is 'PBS':
             # see if jobid is in queue
             _, jobids_in_queue, _ = getstatusoutput('qselect',
                                                     stdout=subprocess.PIPE,
@@ -66,10 +66,11 @@ def in_queue(self):
 
         elif VASPRC['scheduler'] is 'SGE':
             # SGE does not print a list of jobids
-            , stdout, = getstatusoutput('qstat',
-                                        stdout=subprocess.PIPE,
-                                        stderr=subprocess.PIPE)
-            jobids_in_queue = [line.split()[0] for line in stdout.split('\n')[2:-1]]
+            _, stdout, _ = getstatusoutput('qstat',
+                                           stdout=subprocess.PIPE,
+                                           stderr=subprocess.PIPE)
+            jobids_in_queue = [line.split()[0]
+                               for line in stdout.split('\n')[2:]]
 
             if str(jobid) in jobids_in_queue:
                 status, output, error = getstatusoutput(['qstat', '-j', jobid],
@@ -80,6 +81,7 @@ def in_queue(self):
                     return True
             else:
                 return False
+
 
 @monkeypatch_class(vasp.Vasp)
 def calculate(self, atoms=None, properties=['energy'],

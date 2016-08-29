@@ -1,4 +1,4 @@
-"""Calculate bandstructure diagrams in jasp"""
+"""Calculate bandstructure diagrams in vasp"""
 import vasp
 from monkeypatch import monkeypatch_class
 
@@ -9,6 +9,8 @@ import numpy as np
 if 'PBS_O_WORKDIR' in os.environ:
     import matplotlib
     matplotlib.use('Agg')
+
+# TODO
 
 import matplotlib.pyplot as plt
 from ase.dft import DOS
