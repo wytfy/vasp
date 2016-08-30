@@ -186,8 +186,9 @@ def calculate(self, atoms=None, properties=['energy'],
     # if you get here, a job is getting submitted
     CWD = os.getcwd()
     VASPDIR = self.directory
-    script = """
-#!/bin/bash
+    module = VASPRC['module']
+    script = """#!/bin/bash
+module load {module}
 cd {CWD}  # this is the current working directory
 cd {VASPDIR}  # this is the vasp directory
 runvasp.py     # this is the vasp command
@@ -211,6 +212,12 @@ runvasp.py     # this is the vasp command
     elif VASPRC['scheduler'] == 'SGE':
         # SGE does not allow '/' in jobnames
         jobname = VASPDIR.replace('/', '|')
+
+        qscript = os.path.join(VASPDIR, 'qscript')
+        f = open(qscript, 'w')
+        f.write(script)
+        f.close()
+
         log.debug('{0} will be the jobname.'.format(jobname))
         log.debug('-pe {0} {1}'.format(VASPRC['queue.pe'],
                                        VASPRC['queue.nprocs']))
@@ -218,11 +225,14 @@ runvasp.py     # this is the vasp command
         log.debug('-q {0}'.format(VASPRC['queue.q']))
 
         cmdlist = ['{0}'.format(VASPRC['queue.command'])]
+        cmdlist += ['-o', VASPDIR]
         cmdlist += [option for option in VASPRC['queue.options'].split()]
         cmdlist += ['-N', '{0}'.format(jobname),
                     '-q {0}'.format(VASPRC['queue.q']),
                     '-pe {0} {1}'.format(VASPRC['queue.pe'],
                                          VASPRC['queue.nprocs'])]
+
+        cmdlist += [qscript]
 
     log.debug('{0}'.format(' '.join(cmdlist)))
     p = subprocess.Popen(cmdlist,
@@ -237,7 +247,7 @@ runvasp.py     # this is the vasp command
     if out == '' or err != '':
         raise Exception('something went wrong in qsub:\n\n{0}'.format(err))
 
-    if JASPRC['scheduler'] == 'SGE':    
+    if VASPRC['scheduler'] == 'SGE':    
         jobid = out.split()[2]
     else:
         jobid = out.strip()
@@ -245,7 +255,7 @@ runvasp.py     # this is the vasp command
     self.write_db(data={'jobid': jobid})
 
     raise VaspSubmitted('{} submitted: {}'.format(self.directory,
-                                                  out.strip()))
+                                                  jobid))
 
 
 @monkeypatch_class(vasp.Vasp)
