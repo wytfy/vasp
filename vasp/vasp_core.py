@@ -67,8 +67,7 @@ class Vasp(FileIOCalculator, object):
     implemented_properties = ['energy', 'free_energy', 'forces', 'stress',
                               'charges', 'dipole',
                               'magmom',  # the overall magnetic moment
-                              'magmoms', # the individual magnetic moments
-                              'free_energy']  
+                              'magmoms'] # the individual magnetic moments
 
     # These allow you to use simple strings for the xc kwarg and automatically
     # set the relevant vasp tags.
