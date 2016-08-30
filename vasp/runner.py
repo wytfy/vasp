@@ -1,6 +1,6 @@
 """Run Vasp jobs in a queue.
 
-This assumes you use Torque.
+This assumes you use Torque. This should now also work for SGE.
 """
 
 import os
@@ -193,19 +193,37 @@ cd {VASPDIR}  # this is the vasp directory
 runvasp.py     # this is the vasp command
 #end""".format(**locals())
 
-    jobname = VASPDIR
-    log.debug('{0} will be the jobname.'.format(jobname))
-    log.debug('-l nodes={0}:ppn={1}'.format(VASPRC['queue.nodes'],
-                                            VASPRC['queue.ppn']))
+    if VASPRC['scheduler'] == 'PBS':
+        jobname = VASPDIR
+        log.debug('{0} will be the jobname.'.format(jobname))
+        log.debug('-l nodes={0}:ppn={1}'.format(VASPRC['queue.nodes'],
+                                                VASPRC['queue.ppn']))
+        cmdlist = ['{0}'.format(VASPRC['queue.command'])]
+        cmdlist += ['-o', VASPDIR]
+        cmdlist += [option for option in VASPRC['queue.options'].split()]
+        cmdlist += ['-N', '{0}'.format(jobname),
+                    '-l walltime={0}'.format(VASPRC['queue.walltime']),
+                    '-l nodes={0}:ppn={1}'.format(VASPRC['queue.nodes'],
+                                                  VASPRC['queue.ppn']),
+                    '-l mem={0}'.format(VASPRC['queue.mem'])]
 
-    cmdlist = ['{0}'.format(VASPRC['queue.command'])]
-    cmdlist += ['-o', VASPDIR]
-    cmdlist += [option for option in VASPRC['queue.options'].split()]
-    cmdlist += ['-N', '{0}'.format(jobname),
-                '-l walltime={0}'.format(VASPRC['queue.walltime']),
-                '-l nodes={0}:ppn={1}'.format(VASPRC['queue.nodes'],
-                                              VASPRC['queue.ppn']),
-                '-l mem={0}'.format(VASPRC['queue.mem'])]
+
+    elif VASPRC['scheduler'] == 'SGE':
+        # SGE does not allow '/' in jobnames
+        jobname = VASPDIR.replace('/', '|')
+        log.debug('{0} will be the jobname.'.format(jobname))
+        log.debug('-pe {0} {1}'.format(VASPRC['queue.pe'],
+                                       VASPRC['queue.nprocs']))
+
+        log.debug('-q {0}'.format(VASPRC['queue.q']))
+
+        cmdlist = ['{0}'.format(VASPRC['queue.command'])]
+        cmdlist += [option for option in VASPRC['queue.options'].split()]
+        cmdlist += ['-N', '{0}'.format(jobname),
+                    '-q {0}'.format(VASPRC['queue.q']),
+                    '-pe {0} {1}'.format(VASPRC['queue.pe'],
+                                         VASPRC['queue.nprocs'])]
+
     log.debug('{0}'.format(' '.join(cmdlist)))
     p = subprocess.Popen(cmdlist,
                          stdin=subprocess.PIPE,
@@ -219,7 +237,12 @@ runvasp.py     # this is the vasp command
     if out == '' or err != '':
         raise Exception('something went wrong in qsub:\n\n{0}'.format(err))
 
-    self.write_db(data={'jobid': out.strip()})
+    if JASPRC['scheduler'] == 'SGE':    
+        jobid = out.split()[2]
+    else:
+        jobid = out.strip()
+
+    self.write_db(data={'jobid': jobid})
 
     raise VaspSubmitted('{} submitted: {}'.format(self.directory,
                                                   out.strip()))
