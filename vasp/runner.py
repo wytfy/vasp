@@ -211,7 +211,7 @@ runvasp.py     # this is the vasp command
 
     elif VASPRC['scheduler'] == 'SGE':
         # SGE does not allow '/' in jobnames
-        jobname = VASPDIR.replace('/', '|')
+        jobname = self.jobname.replace('/', '|')
 
         qscript = os.path.join(VASPDIR, 'qscript')
         f = open(qscript, 'w')

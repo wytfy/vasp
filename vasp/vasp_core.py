@@ -67,7 +67,8 @@ class Vasp(FileIOCalculator, object):
     implemented_properties = ['energy', 'forces', 'stress',
                               'charges', 'dipole',
                               'magmom',  # the overall magnetic moment
-                              'magmoms']  # the individual magnetic moments
+                              'magmoms', # the individual magnetic moments
+                              'free_energy']  
 
     # These allow you to use simple strings for the xc kwarg and automatically
     # set the relevant vasp tags.
@@ -240,7 +241,6 @@ class Vasp(FileIOCalculator, object):
         else:
             FileIOCalculator.__init__(self, restart, ignore_bad_restart_file,
                                       str(label), atoms)
-
         # The calculator should be up to date with the file
         # system here.
 
@@ -556,13 +556,15 @@ class Vasp(FileIOCalculator, object):
         if label is None:
             self.directory = os.path.abspath(".")
             self.prefix = None
+            self.jobname = self.directory
         else:
             d = os.path.expanduser(label)
             d = os.path.abspath(d)
             self.directory, self.prefix = d, None
+            self.jobname = label
             if not os.path.isdir(self.directory):
                 os.makedirs(self.directory)
-
+        
         # Convenient attributes for file names
         for f in ['INCAR', 'POSCAR', 'CONTCAR', 'POTCAR',
                   'KPOINTS', 'OUTCAR']:
