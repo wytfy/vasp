@@ -190,7 +190,7 @@ def calculate(self, atoms=None, properties=['energy'],
     module = VASPRC['module']
     script = """#!/bin/bash
 module load {module}
-cd {CWD}  # this is the current working directory
+cd {CWD}
 cd {VASPDIR}  # this is the vasp directory
 runvasp.py     # this is the vasp command
 #end""".format(**locals())
