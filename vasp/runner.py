@@ -36,13 +36,15 @@ def jobid(self):
 @monkeypatch_class(vasp.Vasp)
 def in_queue(self):
     """Return True or False if the directory has a job in the queue."""
+
     if self.get_db('jobid') is None:
         log.debug('jobid not found for calculation.')
         return False
     else:
+
         # get the jobid
         jobid = self.get_db('jobid')
-        if VASPRC['scheduler'] is 'PBS':
+        if VASPRC['scheduler'] == 'PBS':
             # see if jobid is in queue
             _, jobids_in_queue, _ = getstatusoutput('qselect',
                                                     stdout=subprocess.PIPE,
@@ -64,19 +66,18 @@ def in_queue(self):
             else:
                 return False
 
-        elif VASPRC['scheduler'] is 'SGE':
+        elif VASPRC['scheduler'] == 'SGE':
             # SGE does not print a list of jobids
             _, stdout, _ = getstatusoutput('qstat',
                                            stdout=subprocess.PIPE,
                                            stderr=subprocess.PIPE)
             jobids_in_queue = [line.split()[0]
-                               for line in stdout.split('\n')[2:]]
-
+                               for line in stdout.split('\n')[2:-1]]
+            
             if str(jobid) in jobids_in_queue:
                 status, output, error = getstatusoutput(['qstat', '-j', jobid],
                                                         stdout=subprocess.PIPE,
                                                         stderr=subprocess.PIPE)
-
                 if status == 0:
                     return True
             else:
