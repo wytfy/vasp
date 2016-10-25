@@ -38,7 +38,7 @@ def set(self, **kwargs):
 
     if 'nsw' in kwargs:
         kwargs.update(self.set_nsw_dict(kwargs['nsw']))
-
+    
     original_params = self.parameters
 
     changed_parameters = FileIOCalculator.set(self, **kwargs)
@@ -72,8 +72,7 @@ def set_ispin_dict(self, val):
         d = {'ispin': 1}
         if 'magmom' in self.parameters:
             d['magmom'] = None
-        if 'lorbit' in self.parameters:
-            d['lorbit'] = None
+
         return d
     elif val == 2:
         d = {'ispin': 2}
@@ -164,7 +163,7 @@ def set_nsw_dict(self, val):
     d = {'nsw': val}
 
     if val > 0:
-        d['lwave'] = True
+        d['lwave'] = False
     elif val == 0:
         d['lwave'] = False
     else:
