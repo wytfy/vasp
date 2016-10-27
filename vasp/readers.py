@@ -369,8 +369,9 @@ def read_results(self):
         try:
             stress = atoms.get_stress()
         except NotImplementedError:
+            # e.g. ISIF=0, stress is not computed
             stress = None
-
+            
         if self.atoms is None:
             self.sort_atoms(atoms)
 
