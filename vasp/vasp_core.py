@@ -865,13 +865,12 @@ class Vasp(FileIOCalculator, object):
             catoms = catoms[self.resort]
             catoms.set_calculator(SPC(catoms,
                                       energy=atoms.get_potential_energy(),
-                                      forces=atoms.get_forces()))
+                                      forces=atoms.get_forces()[self.resort]))
             LOA += [catoms]
         return LOA
 
     def view(self, index=None):
         """Visualize the calculation.
-
         """
         from ase.visualize import view
         if index is not None:
