@@ -869,6 +869,42 @@ class Vasp(FileIOCalculator, object):
             LOA += [catoms]
         return LOA
 
+    @property
+    def traj_no_constraints(self):
+        """Get a trajectory but remove constraints on atoms so SCF forces are correct.
+
+        This reads Atoms objects from vasprun.xml. By default returns
+        all images.  If index is an integer, return that image.
+
+        Technically, this is just a list of atoms with a
+        SinglePointCalculator attached to them.
+
+        This is usually only relevant if you have done a
+        relaxation. If the calculation is an NEB, the images are
+        returned.
+
+        """
+        from ase.calculators.singlepoint import SinglePointCalculator as SPC
+        self.update()
+
+        if self.neb:
+            images, energies = self.get_neb()
+            tatoms = [x.copy() for x in images]
+            for i, x in enumerate(tatoms):
+                x.set_calculator(SPC(x, energy=energies[i]))
+            return tatoms
+
+        LOA = []
+        for atoms in read(os.path.join(self.directory, 'vasprun.xml'), ':'):
+            atoms.set_constraint(None)
+            catoms = atoms.copy()
+            catoms = catoms[self.resort]
+            catoms.set_calculator(SPC(catoms,
+                                      energy=atoms.get_potential_energy(),
+                                      forces=atoms.get_forces()[self.resort]))
+            LOA += [catoms]
+        return LOA
+
     def view(self, index=None):
         """Visualize the calculation.
         """
