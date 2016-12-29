@@ -276,8 +276,14 @@ def write_kpoints(self, fname=None):
 
         # line 5 - only if we are in automatic mode
         if MODE in ['m', 'g']:
-            if p.get('gamma', None) and len(p.get('gamma')) == 3:
-                f.write('{0} {1} {2}\n'.format(*p['gamma']))
+            
+            if p.get('gamma', None):
+                try:
+                    if len(p.get('gamma')) == 3:
+                        f.write('{0} {1} {2}\n'.format(*p['gamma']))
+                except(TypeError):
+                    # When gamma=True
+                    f.write('0.0 0.0 0.0\n')
             else:
                 f.write('0.0 0.0 0.0\n')
 
