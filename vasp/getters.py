@@ -129,7 +129,7 @@ def get_number_of_spins(self):
 
     """
     if 'ispin' in self.parameters:
-        return 2
+        return self.parameters['ispin']
     else:
         return 1
 
