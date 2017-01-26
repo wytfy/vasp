@@ -2,9 +2,9 @@
 
 import os
 import numpy as np
-import vasp
-from vasp import log
-from monkeypatch import monkeypatch_class
+from . import vasp
+from .vasp import log
+from .monkeypatch import monkeypatch_class
 
 from ase.data import atomic_masses
 from ase.io import read

@@ -9,8 +9,8 @@ def monkeypatch_class(cls):
     def decorator(func):
         setattr(cls, func.__name__, func)
         s = ('\n\nMonkey-patch defined in '
-             '{f.func_code.co_filename} '
-             'at line {f.func_code.co_firstlineno}')
+             '{f.__code__.co_filename} '
+             'at line {f.__code__.co_firstlineno}')
         if func.__doc__ is None:
             func.__doc__ = ''
         func.__doc__ += s.format(f=func)

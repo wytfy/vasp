@@ -18,20 +18,20 @@ logging.basicConfig(stream=sys.stdout,
 log = logging.getLogger('Vasp')
 
 # The core class is defined here
-from vasp_core import Vasp
+from .vasp_core import Vasp
 
 # These modules monkeypatch the Vasp class
-import writers
-import readers
-import getters
-import setters
-import vib
-import neb
-import serialize
-import runner
-import bader
-import bandstructure
-import elastic_moduli
+from . import writers
+from . import readers
+from . import getters
+from . import setters
+from . import vib
+from . import neb
+from . import serialize
+from . import runner
+from . import bader
+from . import bandstructure
+from . import elastic_moduli
 
 
 def tryit(func):
@@ -59,8 +59,8 @@ def tryit(func):
         Wrapped in vasp.tryit.
 
         Defined at [[{0}::{1}]].'''
-        template = template.format(func.im_func.func_code.co_filename,
-                                   func.im_func.func_code.co_firstlineno)
+        template = template.format(func.__func__.__code__.co_filename,
+                                   func.__func__.__code__.co_firstlineno)
     else:
         template = '''
 

@@ -8,8 +8,8 @@ monkey-patched onto the Vasp class as if it were defined in vasp.py.
 """
 import os
 import numpy as np
-import vasp
-from monkeypatch import monkeypatch_class
+from . import vasp
+from .monkeypatch import monkeypatch_class
 from ase.calculators.calculator import FileIOCalculator
 
 
@@ -169,7 +169,7 @@ def write_incar(self, incar=None):
 
     with open(incar, 'w') as f:
         f.write('INCAR created by Atomic Simulation Environment\n')
-        for key, val in d.iteritems():
+        for key, val in list(d.items()):
             key = ' ' + key.upper()
             if val is None:
                 # Do not write out None values

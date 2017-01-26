@@ -5,11 +5,11 @@ This assumes you use Torque. This should now also work for SGE.
 
 import os
 import subprocess
-import vasp
-from vasprc import VASPRC
-from vasp import log
-from exceptions import VaspSubmitted, VaspQueued
-from monkeypatch import monkeypatch_class
+from . import vasp
+from .vasprc import VASPRC
+from .vasp import log
+from .exceptions import VaspSubmitted, VaspQueued
+from .monkeypatch import monkeypatch_class
 
 from ase.calculators.calculator import Calculator
 
@@ -395,7 +395,7 @@ def qdel(self, *options):
                                               stdout=subprocess.PIPE,
                                               stderr=subprocess.PIPE)
         if status != 0:
-            print(output + err)
+            print((output + err))
         return status, output
     return '{} not in queue.'.format(self.directory)
 
@@ -417,9 +417,9 @@ def qstat(self, *options):
         if status == 0:
             print(output)
         else:
-            print(output + err)
+            print((output + err))
     else:
-        print('{} not in queue.'.format(self.directory))
+        print(('{} not in queue.'.format(self.directory)))
 
 
 @monkeypatch_class(vasp.Vasp)

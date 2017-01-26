@@ -16,10 +16,10 @@ from ase.calculators.calculator import FileIOCalculator
 from ase.io import read
 
 # internal modules
-import exceptions
-import validate
-from vasprc import VASPRC
-from vasp import log
+from . import exceptions
+from . import validate
+from .vasprc import VASPRC
+from .vasp import log
 
 
 def VaspExceptionHandler(calc, exc_type, exc_value, exc_traceback):
@@ -244,7 +244,7 @@ class Vasp(FileIOCalculator, object):
         # system here.
 
         # Add default parameters if they aren't set otherwise.
-        for key, val in Vasp.default_parameters.iteritems():
+        for key, val in list(Vasp.default_parameters.items()):
             if key not in kwargs and key not in self.parameters:
                 kwargs[key] = val
 
@@ -300,7 +300,7 @@ class Vasp(FileIOCalculator, object):
 
         # Finally run validate functions
         if VASPRC['validate']:
-            for key, val in self.parameters.iteritems():
+            for key, val in list(self.parameters.items()):
                 if key in validate.__dict__:
                     f = validate.__dict__[key]
                     f(self, val)
@@ -407,9 +407,9 @@ class Vasp(FileIOCalculator, object):
             with connect(os.path.join(self.directory, 'DB.db')) as con:
                 tatoms = con.get_atoms(id=1)
             self.write_db(atoms=tatoms, data={'resort': ns})
-            print('Fixed resort issue in {}. '
+            print(('Fixed resort issue in {}. '
                   'You should not see this message'
-                  ' again'.format(self.directory))
+                  ' again'.format(self.directory)))
             self.resort = ns
             sort_indices = [k[1] for k in
                             sorted([[j, i]
@@ -458,7 +458,7 @@ class Vasp(FileIOCalculator, object):
         cell = atoms.get_cell()
 
         A, B, C = [i for i in cell]
-        l = map(np.linalg.norm, cell)
+        l = list(map(np.linalg.norm, cell))
         a, b, c = l
         alpha = np.arccos(np.dot(B / b, C / c)) * 180 / np.pi
         beta = np.arccos(np.dot(A / a, C / c)) * 180 / np.pi
@@ -530,7 +530,7 @@ class Vasp(FileIOCalculator, object):
         #########################
         s += ['\nINPUT Parameters:']
         s += ['-----------------']
-        for key, value in self.parameters.iteritems():
+        for key, value in list(self.parameters.items()):
             s += ['  {0:<10}: {1}'.format(key, value)]
 
         # Format pseudo-potential output
@@ -622,7 +622,7 @@ class Vasp(FileIOCalculator, object):
 
             file_params['ldau_luj'] = ldau_luj
 
-        if not {k: v for k, v in self.parameters.iteritems()
+        if not {k: v for k, v in list(self.parameters.items())
                 if v is not None} == file_params:
             new_keys = set(self.parameters.keys()) - set(file_params.keys())
             missing_keys = (set(file_params.keys()) -
@@ -632,7 +632,7 @@ class Vasp(FileIOCalculator, object):
             log.debug('params_on_file do not match.')
             log.debug('file-params: {}'.format(file_params))
             log.debug('compared to: {}'.format({k: v for k, v in
-                                                self.parameters.iteritems()
+                                                list(self.parameters.items())
                                                 if v is not None}))
             system_changes += ['params_on_file']
 
@@ -686,10 +686,9 @@ class Vasp(FileIOCalculator, object):
                 if 'Voluntary context switches:' in lines[-1]:
                     return False
 
-    def clone(self, newdir):
+    def clone(self, newdir, set_label=True):
         """Copy the calculation directory to newdir and set label to
-        newdir.
-
+        newdir if set_label is True
         """
         state = self.get_state()
 
@@ -714,8 +713,8 @@ class Vasp(FileIOCalculator, object):
             self.write_db(fname=newdb,
                           data={'path': os.path.abspath(newdir),
                                 'jobid': None})
-
-        self.__init__(newdir)
+        if set_label:
+            self.__init__(newdir)
 
     def get_state(self):
         """Determine calculation state based on directory contents.
@@ -885,11 +884,11 @@ class Vasp(FileIOCalculator, object):
             if key in validate.__dict__:
                 f = validate.__dict__[key]
                 d = f.__doc__ or 'No docstring found.'
-                print('{} = {}:'.format(key, self.parameters[key]))
-                if long:
-                    print('  ' + d)
+                print(('{} = {}:'.format(key, self.parameters[key])))
+                if int:
+                    print(('  ' + d))
                 else:
-                    print('  ' + d.split('\n')[0])
+                    print(('  ' + d.split('\n')[0]))
                 print('')
 
     @property

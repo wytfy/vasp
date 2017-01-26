@@ -1,7 +1,7 @@
 """Properties for serializing vasp calculations."""
 import os
 from os.path import join
-import vasp as VASP
+from . import vasp as VASP
 
 
 def vasp(self):

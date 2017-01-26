@@ -1,8 +1,8 @@
 """Module to get elastic moduli from Vasp calculations."""
 import os
-import vasp
+from . import vasp
 import numpy as np
-from monkeypatch import monkeypatch_class
+from .monkeypatch import monkeypatch_class
 
 
 @monkeypatch_class(vasp.Vasp)
