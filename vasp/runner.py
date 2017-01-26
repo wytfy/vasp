@@ -202,15 +202,15 @@ runvasp.py     # this is the vasp command
         log.debug('{0} will be the jobname.'.format(jobname))
         log.debug('-l nodes={0}:ppn={1}'.format(VASPRC['queue.nodes'],
                                                 VASPRC['queue.ppn']))
+
         cmdlist = ['{0}'.format(VASPRC['queue.command'])]
         cmdlist += ['-o', VASPDIR]
         cmdlist += [option for option in VASPRC['queue.options'].split()]
         cmdlist += ['-N', '{0}'.format(jobname),
-                    '-l walltime={0}'.format(VASPRC['queue.walltime']),
-                    '-l nodes={0}:ppn={1}'.format(VASPRC['queue.nodes'],
-                                                  VASPRC['queue.ppn']),
-                    '-l mem={0}'.format(VASPRC['queue.mem'])]
-
+                    '-l', 'walltime={0}'.format(VASPRC['queue.walltime']),
+                    '-l', 'nodes={0}:ppn={1}'.format(VASPRC['queue.nodes'],
+                                              VASPRC['queue.ppn']),
+                    '-l', 'mem={0}'.format(VASPRC['queue.mem'])]
 
     elif VASPRC['scheduler'] == 'SGE':
         # SGE does not allow '/' in jobnames
@@ -230,9 +230,8 @@ runvasp.py     # this is the vasp command
         cmdlist += ['-o', VASPDIR]
         cmdlist += [option for option in VASPRC['queue.options'].split()]
         cmdlist += ['-N', '{0}'.format(jobname),
-                    '-q {0}'.format(VASPRC['queue.q']),
-                    '-pe {0} {1}'.format(VASPRC['queue.pe'],
-                                         VASPRC['queue.nprocs'])]
+                    '-q', '{0}'.format(VASPRC['queue.q']),
+                    '-pe', '{0}'.format(VASPRC['queue.pe']), '{0}'.format(VASPRC['queue.nprocs'])]
 
         cmdlist += [qscript]
 
