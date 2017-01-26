@@ -4,9 +4,9 @@ from hashlib import sha1
 
 import numpy as np
 from xml.etree import ElementTree
-import vasp
-from vasp import log
-from monkeypatch import monkeypatch_class
+from . import vasp
+from .vasp import log
+from .monkeypatch import monkeypatch_class
 
 
 @monkeypatch_class(vasp.Vasp)
@@ -30,7 +30,7 @@ def get_db(self, *keys):
             for i, key in enumerate(keys):
                 vals[i] = (at.key_value_pairs.get(key, None)
                            or at.data.get(key, None))
-        except KeyError, e:
+        except KeyError as e:
             if e.message == 'no match':
                 pass
     return vals if len(vals) > 1 else vals[0]
@@ -283,7 +283,7 @@ def get_volumetric_data(self, filename=None, **kwargs):
     if filename is None:
         filename = os.path.join(self.directory, 'CHG')
 
-    from VaspChargeDensity import VaspChargeDensity
+    from .VaspChargeDensity import VaspChargeDensity
 
     atoms = self.get_atoms()
     vd = VaspChargeDensity(filename)
@@ -406,7 +406,7 @@ def get_dipole_vector(self, atoms=None):
     """
     self.update()
 
-    from POTCAR import get_ZVAL
+    from .POTCAR import get_ZVAL
 
     if atoms is None:
         atoms = self.get_atoms()
@@ -491,7 +491,7 @@ def get_pseudopotentials(self):
         s.update(data)
         hashes.append(s.hexdigest())
 
-    return zip(symbols, paths, hashes)
+    return list(zip(symbols, paths, hashes))
 
 
 @monkeypatch_class(vasp.Vasp)
@@ -590,7 +590,7 @@ def get_composition(self, basis=None):
         S[symbol] = float(symbols.count(symbol)) / len(atoms)
 
     if basis:
-        if basis in S.keys():
+        if basis in list(S.keys()):
             return S[basis]
         else:
             return 0.0

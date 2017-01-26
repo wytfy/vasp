@@ -1,9 +1,9 @@
 import os
 import numpy as np
 from subprocess import Popen, PIPE
-import vasp
-from POTCAR import get_ZVAL
-from monkeypatch import monkeypatch_class
+from . import vasp
+from .POTCAR import get_ZVAL
+from .monkeypatch import monkeypatch_class
 
 
 @monkeypatch_class(vasp.Vasp)
@@ -59,7 +59,7 @@ def bader(self, cmd=None, ref=False, verbose=False, overwrite=False):
         if out == '' or err != '':
             raise Exception('Cannot perform Bader:\n\n{0}'.format(err))
         elif verbose:
-            print('Bader completed for {0}'.format(self.directory))
+            print(('Bader completed for {0}'.format(self.directory)))
 
         # Now store the calculated charges
         self._get_calculated_charges()
@@ -124,8 +124,8 @@ def _get_calculated_charges(self,
             elif 'CHARGE' in headings.split():
                 j = headings.split().index('CHARGE')
             else:
-                print('Can\'t find keyword "BADER" or "CHARGE".' \
-                      + ' Assuming the ACF.dat file has 6 columns.')
+                print(('Can\'t find keyword "BADER" or "CHARGE".' \
+                      + ' Assuming the ACF.dat file has 6 columns.'))
                 j = 4
                 assume6columns = True
         if sep in line:  # Stop at last seperator line
