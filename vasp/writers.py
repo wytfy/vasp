@@ -301,5 +301,5 @@ def write_potcar(self, fname=None):
     with open(fname, 'wb') as potfile:
         for _, pfile, _ in self.ppp_list:
             pfile = os.path.join(os.environ['VASP_PP_PATH'], pfile)
-            with open(pfile) as f:
+            with open(pfile, 'rb') as f:
                 potfile.write(f.read())

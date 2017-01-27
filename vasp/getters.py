@@ -31,7 +31,7 @@ def get_db(self, *keys):
                 vals[i] = (at.key_value_pairs.get(key, None)
                            or at.data.get(key, None))
         except KeyError as e:
-            if e.message == 'no match':
+            if e.args[0] == 'no match':
                 pass
     return vals if len(vals) > 1 else vals[0]
 

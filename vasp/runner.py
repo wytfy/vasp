@@ -70,7 +70,8 @@ def in_queue(self):
             # SGE does not print a list of jobids
             _, stdout, _ = getstatusoutput('qstat',
                                            stdout=subprocess.PIPE,
-                                           stderr=subprocess.PIPE)
+                                           stderr=subprocess.PIPE,
+                                           universal_newlines=True)
             jobids_in_queue = [line.split()[0]
                                for line in stdout.split('\n')[2:-1]]
             
@@ -211,6 +212,14 @@ runvasp.py     # this is the vasp command
                     '-l', 'nodes={0}:ppn={1}'.format(VASPRC['queue.nodes'],
                                               VASPRC['queue.ppn']),
                     '-l', 'mem={0}'.format(VASPRC['queue.mem'])]
+        log.debug('{0}'.format(' '.join(cmdlist)))
+        p = subprocess.Popen(cmdlist,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+
+        log.debug(script)
+        out, err = p.communicate(script)        
 
     elif VASPRC['scheduler'] == 'SGE':
         # SGE does not allow '/' in jobnames
@@ -235,14 +244,15 @@ runvasp.py     # this is the vasp command
 
         cmdlist += [qscript]
 
-    log.debug('{0}'.format(' '.join(cmdlist)))
-    p = subprocess.Popen(cmdlist,
-                         stdin=subprocess.PIPE,
-                         stdout=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
+        log.debug('{0}'.format(' '.join(cmdlist)))
+        p = subprocess.Popen(cmdlist,
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE,
+                             universal_newlines=True)
 
-    log.debug(script)
-    out, err = p.communicate(script)
+        log.debug(script)
+        out, err = p.communicate()
 
     if out == '' or err != '':
         raise Exception('something went wrong in qsub:\n\n{0}'.format(err))
