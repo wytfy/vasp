@@ -80,16 +80,16 @@ import inspect
 # We avoid decorating class methods. It seems to break them.
 for attr in Vasp.__dict__:
     f = getattr(Vasp, attr)
-    if inspect.ismethod(f) and f.__self__ is not Vasp:
+    if inspect.isfunction(f):
         setattr(Vasp, attr, tryit(getattr(Vasp, attr)))
 
 for attr in Calculator.__dict__:
     f = getattr(Vasp, attr)
-    if inspect.ismethod(f) and f.__self__ is not Vasp:
+    if inspect.isfunction(f):
         setattr(Calculator, attr, tryit(getattr(Calculator, attr)))
 
 for attr in FileIOCalculator.__dict__:
     f = getattr(Vasp, attr)
-    if inspect.ismethod(f) and f.__self__ is not Vasp:
+    if inspect.isfunction(f):
         setattr(FileIOCalculator, attr,
                 tryit(getattr(FileIOCalculator, attr)))
