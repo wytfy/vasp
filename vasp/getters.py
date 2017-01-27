@@ -485,10 +485,9 @@ def get_pseudopotentials(self):
     for ppp in paths:
         with open(os.path.join(vasp_pp_path, ppp), 'r') as f:
             data = f.read()
-
         s = sha1()
-        s.update("blob %u\0" % len(data))
-        s.update(data)
+        s.update(b"blob %u\0" % len(data))
+        s.update(data.encode())
         hashes.append(s.hexdigest())
 
     return list(zip(symbols, paths, hashes))
