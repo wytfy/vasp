@@ -13,6 +13,7 @@ import numpy as np
 import ase
 from ase.calculators.calculator import Calculator
 from ase.calculators.calculator import FileIOCalculator
+from ase.calculators.calculator import PropertyNotImplementedError
 from ase.io import read
 
 # internal modules
@@ -36,6 +37,12 @@ def VaspExceptionHandler(calc, exc_type, exc_value, exc_traceback):
         return np.array([[None, None, None] for atom in calc.get_atoms()])
     elif exc_type == KeyError and exc_value.args[0] == 'stress':
         return np.array([None, None, None, None, None, None])
+    elif exc_type == PropertyNotImplementedError and exc_value.args[0] == 'energy':
+        return None
+    elif exc_type == PropertyNotImplementedError and exc_value.args[0] == 'forces':
+        return np.array([[None, None, None] for atom in calc.get_atoms()])
+    elif exc_type == PropertyNotImplementedError and exc_value.args[0] == 'stress':
+        return np.array([None, None, None, None, None, None])    
 
     print('Unhandled exception in Vasp')
     import traceback

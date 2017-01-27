@@ -7,7 +7,7 @@ from xml.etree import ElementTree
 from . import vasp
 from .vasp import log
 from .monkeypatch import monkeypatch_class
-
+from ase.calculators.calculator import PropertyNotImplementedError
 
 @monkeypatch_class(vasp.Vasp)
 def get_db(self, *keys):
@@ -612,3 +612,38 @@ def get_charges(self, atoms=None):
         return self._calculated_charges
     else:
         return None
+
+
+@monkeypatch_class(vasp.Vasp)
+def get_property(self, name, atoms=None, allow_calculation=True):
+    '''
+    This is copied from ase.calculators.calculator with the
+    only change is to return the name of the property in the
+    PropertyNotImplementedError so we can handle it better
+    '''
+    
+    if name not in self.implemented_properties:
+        raise PropertyNotImplementedError(name)
+    if atoms is None:
+        atoms = self.atoms
+        system_changes = []
+    else:
+        system_changes = self.check_state(atoms)
+        if system_changes:
+            self.reset()
+    if name not in self.results:
+        if not allow_calculation:
+            return None
+        self.calculate(atoms, [name], system_changes)
+    if name == 'magmom' and 'magmom' not in self.results:
+        return 0.0
+    if name == 'magmoms' and 'magmoms' not in self.results:
+        return np.zeros(len(atoms))
+    if name not in self.results:
+        # For some reason the calculator was not able to do what we want,
+        # and that is OK.
+        raise PropertyNotImplementedError(name)
+    result = self.results[name]
+    if isinstance(result, np.ndarray):
+        result = result.copy()
+    return result
