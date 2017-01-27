@@ -15,7 +15,11 @@ def chgsum(self):
         cmdlist = ['chgsum.pl',
                    'AECCAR0',
                    'AECCAR2']
-        p = Popen(cmdlist, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        p = Popen(cmdlist,
+                  stdin=PIPE,
+                  stdout=PIPE,
+                  stderr=PIPE,
+                  universal_newlines=True)
         out, err = p.communicate()
         if out == '' or err != '':
             raise Exception('Cannot perform chgsum:\n\n{0}'.format(err))
@@ -54,7 +58,11 @@ def bader(self, cmd=None, ref=False, verbose=False, overwrite=False):
         elif type(cmd) is list:
             cmdlist = cmd
 
-        p = Popen(cmdlist, stdin=PIPE, stdout=PIPE, stderr=PIPE)
+        p = Popen(cmdlist,
+                  stdin=PIPE,
+                  stdout=PIPE,
+                  stderr=PIPE,
+                  universal_newlines=True)
         out, err = p.communicate()
         if out == '' or err != '':
             raise Exception('Cannot perform Bader:\n\n{0}'.format(err))

@@ -48,13 +48,15 @@ def in_queue(self):
             # see if jobid is in queue
             _, jobids_in_queue, _ = getstatusoutput('qselect',
                                                     stdout=subprocess.PIPE,
-                                                    stderr=subprocess.PIPE)
+                                                    stderr=subprocess.PIPE,
+                                                    universal_newlines=True)
 
             if str(jobid) in jobids_in_queue.split('\n'):
                 # get details on specific jobid in case it is complete
                 status, output, err = getstatusoutput(['qstat', jobid],
                                                       stdout=subprocess.PIPE,
-                                                      stderr=subprocess.PIPE)
+                                                      stderr=subprocess.PIPE,
+                                                      universal_newlines=True)
                 if status == 0:
                     lines = output.split('\n')
                     fields = lines[2].split()
@@ -78,7 +80,8 @@ def in_queue(self):
             if str(jobid) in jobids_in_queue:
                 status, output, error = getstatusoutput(['qstat', '-j', jobid],
                                                         stdout=subprocess.PIPE,
-                                                        stderr=subprocess.PIPE)
+                                                        stderr=subprocess.PIPE,
+                                                        universal_newlines=True)
                 if status == 0:
                     return True
             else:
@@ -175,7 +178,8 @@ def calculate(self, atoms=None, properties=['energy'],
                 vaspcmd = VASPRC['vasp.executable.serial']
                 status, output, err = getstatusoutput(vaspcmd,
                                                       stdout=subprocess.PIPE,
-                                                      stderr=subprocess.PIPE)
+                                                      stderr=subprocess.PIPE,
+                                                      universal_newlines=True)
                 if status == 0:
                     self.read_results()
                     return True
@@ -216,7 +220,8 @@ runvasp.py     # this is the vasp command
         p = subprocess.Popen(cmdlist,
                              stdin=subprocess.PIPE,
                              stdout=subprocess.PIPE,
-                             stderr=subprocess.PIPE)
+                             stderr=subprocess.PIPE,
+                             universal_newlines=True)
 
         log.debug(script)
         out, err = p.communicate(script)        
@@ -333,7 +338,8 @@ def set_memory(self,
             os.chdir(self.directory)
             from subprocess import Popen, PIPE
             process = Popen(VASPRC['vasp.executable.serial'],
-                            stdout=PIPE)
+                            stdout=PIPE,
+                            universal_newlines=True)
 
             from threading import Timer
             import time
@@ -402,7 +408,8 @@ def qdel(self, *options):
         cmd = ['qdel'] + list(options) + [jobid]
         status, output, err = getstatusoutput(cmd,
                                               stdout=subprocess.PIPE,
-                                              stderr=subprocess.PIPE)
+                                              stderr=subprocess.PIPE,
+                                              universal_newlines=True)
         if status != 0:
             print((output + err))
         return status, output
@@ -422,7 +429,8 @@ def qstat(self, *options):
 
         status, output, err = getstatusoutput(cmd,
                                               stdout=subprocess.PIPE,
-                                              stderr=subprocess.PIPE)
+                                              stderr=subprocess.PIPE,
+                                              universal_newlines=True)
         if status == 0:
             print(output)
         else:
@@ -444,7 +452,8 @@ def qalter(self, *options):
 
     status, output, err = getstatusoutput(cmd,
                                           stdout=subprocess.PIPE,
-                                          stderr=subprocess.PIPE)
+                                          stderr=subprocess.PIPE,
+                                          universal_newlines=True)
     return status, output
 
 
