@@ -32,6 +32,15 @@ def atoms(calc, val):
     assert isinstance(val, ase.atoms.Atoms) or isinstance(val, list)
 
 
+def dipol(calc, val):
+    """Specifies the center of the cell in direct lattice coordinates
+    with respect to which the total dipole-moment in the cell is calculated. (list)
+
+    https://cms.mpi.univie.ac.at/wiki/index.php/DIPOL
+    """
+    assert isinstance(val, list), 'dipol should be a list.'
+
+
 def eb_k(calc, val):
     """The relative permittivity of the solvent used in the VASPsol code. (float)
 
@@ -56,6 +65,14 @@ def ediffg(calc, val):
     http://cms.mpi.univie.ac.at/wiki/index.php/EDIFFG
     """
     assert isinstance(val, float) or val == 0
+
+
+def efield(calc, val):
+    """EFIELD controls the size of the applied electric field. (float.)
+
+    http://cms.mpi.univie.ac.at/wiki/index.php/EFIELD
+    """
+    assert isinstance(val, float) or isinstance(val, int)
 
 
 def encut(calc, val):
@@ -291,6 +308,15 @@ def lcharg(calc, val):
     assert val in [True, False]
 
 
+def ldipol(calc, val):
+    """ LDIPOL switches on dipole-dipole interaction correction to the potential. (boolean)
+
+    http://cms.mpi.univie.ac.at/wiki/index.php/LDIPOL
+
+    """
+    assert val in [True, False]
+
+
 def lorbit(calc, val):
     """Determines whether the PROCAR or PROOUT files are written.
 
@@ -329,9 +355,9 @@ def lvtot(calc, val):
 
 
 def lvhar(calc, val):
-    """ This tag determines whether the total local potential 
-    (saved in the file LOCPOT contains the entire local potential 
-    (ionic + Hartree + exchange correlation) or the electrostatic 
+    """ This tag determines whether the total local potential
+    (saved in the file LOCPOT contains the entire local potential
+    (ionic + Hartree + exchange correlation) or the electrostatic
     contributions only (ionic + Hartree). (Boolean)
 
     https://cms.mpi.univie.ac.at/wiki/index.php/LVHAR
