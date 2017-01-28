@@ -110,6 +110,15 @@ def icharg(calc, val):
     assert isinstance(val, int)
 
 
+def idipol(calc, val):
+    """IDIPOL switches on monopole/dipole and quadrupole corrections to the total energy.(int)
+
+    https://cms.mpi.univie.ac.at/wiki/index.php/IDIPOL
+
+    """
+    assert val in [1, 2, 3, 4]
+
+
 def images(calc, val):
     """The number of images not counting the end-points for an NEB. (int)
 
@@ -310,6 +319,27 @@ def lreal(calc, val):
     assert val in [True, False, 'On', 'Auto', 'O', 'A']
 
 
+def lvtot(calc, val):
+    """LVTOT determines whether the total local potential is written to the LOCPOT file (boolean).
+
+    https://cms.mpi.univie.ac.at/wiki/index.php/LVTOT
+
+    """
+    assert val in [True, False]
+
+
+def lvhar(calc, val):
+    """ This tag determines whether the total local potential 
+    (saved in the file LOCPOT contains the entire local potential 
+    (ionic + Hartree + exchange correlation) or the electrostatic 
+    contributions only (ionic + Hartree). (Boolean)
+
+    https://cms.mpi.univie.ac.at/wiki/index.php/LVHAR
+
+    """
+    assert val in [True, False]
+
+
 def lwave(calc, val):
     """LWAVE determines whether the WAVECAR is written. (Boolean)
 
@@ -381,6 +411,15 @@ def nupdown(calc, val):
 
     """
     assert isinstance(val, int) or isinstance(val, float)
+
+
+def nsim(calc, val):
+    """NSIM sets the number of bands that are optimized simultaneously by the RMM-DIIS algorithm.(int)
+
+    http://cms.mpi.univie.ac.at/wiki/index.php/NSIM
+    """
+
+    assert isinstance(val, int)
 
 
 def nsw(calc, val):
