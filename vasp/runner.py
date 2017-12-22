@@ -5,9 +5,9 @@ This assumes you use Torque. This should now also work for SGE.
 
 import os
 import subprocess
-from . import vasp
+import vasp
 from .vasprc import VASPRC
-from .vasp import log
+from .vasp import log, Vasp
 from .exceptions import VaspSubmitted, VaspQueued
 from .monkeypatch import monkeypatch_class
 
@@ -27,13 +27,13 @@ def getstatusoutput(*args, **kwargs):
     return (p.returncode, stdout, stderr)
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def jobid(self):
     """Return jobid for the calculation."""
     return self.get_db('jobid')
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def in_queue(self):
     """Return True or False if the directory has a job in the queue."""
 
@@ -68,7 +68,7 @@ def in_queue(self):
             else:
                 return False
 
-        elif VASPRC['scheduler'] == 'SGE':
+        elif VASPRC['scheduler'] == 'OGE':
             # SGE does not print a list of jobids
             _, stdout, _ = getstatusoutput('qstat',
                                            stdout=subprocess.PIPE,
@@ -76,7 +76,7 @@ def in_queue(self):
                                            universal_newlines=True)
             jobids_in_queue = [line.split()[0]
                                for line in stdout.split('\n')[2:-1]]
-            
+
             if str(jobid) in jobids_in_queue:
                 status, output, error = getstatusoutput(['qstat', '-j', jobid],
                                                         stdout=subprocess.PIPE,
@@ -88,7 +88,7 @@ def in_queue(self):
                 return False
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def calculate(self, atoms=None, properties=['energy'],
               system_changes=None):
     """Monkey patch to submit job through the queue.
@@ -101,13 +101,14 @@ def calculate(self, atoms=None, properties=['energy'],
         raise VaspQueued('{} Queued: {}'.format(self.directory,
                                                 self.get_db('jobid')))
 
+
     if VASPRC['mode'] is None:
         log.debug('mode is None. not running')
         return
 
-    if (not self.calculation_required(atoms, ['energy'])
-        and not self.check_state()):
-        print('No calculation_required.')
+    if (not self.calculation_required(atoms, ['energy']) and
+        not self.check_state()):
+        log.debug('No calculation_required.')
         self.read_results()
         return
 
@@ -115,7 +116,9 @@ def calculate(self, atoms=None, properties=['energy'],
     # implementation to set the atoms attribute.
     Calculator.calculate(self, atoms, properties, system_changes)
 
-    self.write_input(atoms, properties, system_changes)
+    if not self.neb:
+        # NEB input is already written.
+        self.write_input(atoms, properties, system_changes)
     if self.parameters.get('luse_vdw', False):
         kernel = os.path.join(self.directory, 'vdw_kernel.bindat')
         if not os.path.exists(kernel):
@@ -138,11 +141,11 @@ def calculate(self, atoms=None, properties=['energy'],
             else:
                 # vanilla MPI run. multiprocessing does not work on more
                 # than one node, and you must specify in VASPRC to use it
-                if (VASPRC['queue.nodes'] > 1
-                    or (VASPRC['queue.nodes'] == 1
-                        and VASPRC['queue.ppn'] > 1
-                        and (VASPRC['multiprocessing.cores_per_process']
-                             == 'None'))):
+                if (VASPRC['queue.nodes'] > 1 or
+                    (VASPRC['queue.nodes'] == 1 and
+                     VASPRC['queue.ppn'] > 1 and
+                     (VASPRC['multiprocessing.cores_per_process'] ==
+                      'None'))):
                     s = 'queue.nodes = {0}'.format(VASPRC['queue.nodes'])
                     log.debug(s)
                     log.debug('queue.ppn = {0}'.format(VASPRC['queue.ppn']))
@@ -193,14 +196,9 @@ def calculate(self, atoms=None, properties=['energy'],
     CWD = os.getcwd()
     VASPDIR = self.directory
     module = VASPRC['module']
-    script = """#!/bin/bash
-module load {module}
-
-cd {CWD}
-cd {VASPDIR}  # this is the vasp directory
-
-runvasp.py     # this is the vasp command
-#end""".format(**locals())
+    with open(VASPRC['script']) as f:
+        script = ''.join(f.readlines())
+    script = script.format(dir=VASPDIR,rc=VASPRC)
 
     if VASPRC['scheduler'] == 'PBS':
         jobname = VASPDIR
@@ -209,7 +207,7 @@ runvasp.py     # this is the vasp command
                                                 VASPRC['queue.ppn']))
 
         cmdlist = ['{0}'.format(VASPRC['queue.command'])]
-        cmdlist += ['-o', VASPDIR]
+        # cmdlist += ['-o', VASPDIR]
         cmdlist += [option for option in VASPRC['queue.options'].split()]
         cmdlist += ['-N', '{0}'.format(jobname),
                     '-l', 'walltime={0}'.format(VASPRC['queue.walltime']),
@@ -224,10 +222,10 @@ runvasp.py     # this is the vasp command
                              universal_newlines=True)
 
         log.debug(script)
-        out, err = p.communicate(script)        
+        out, err = p.communicate(script)
 
-    elif VASPRC['scheduler'] == 'SGE':
-        # SGE does not allow '/' in jobnames
+    elif VASPRC['scheduler'] == 'OGE':
+        # OGE does not allow '/' in jobnames
         jobname = self.jobname.replace('/', '|')
         qscript = os.path.join(VASPDIR, 'qscript')
         f = open(qscript, 'w')
@@ -241,14 +239,12 @@ runvasp.py     # this is the vasp command
         log.debug('-q {0}'.format(VASPRC['queue.q']))
 
         cmdlist = ['{0}'.format(VASPRC['queue.command'])]
-        cmdlist += ['-o', VASPDIR]
         cmdlist += [option for option in VASPRC['queue.options'].split()]
         cmdlist += ['-N', '{0}'.format(jobname),
                     '-q', '{0}'.format(VASPRC['queue.q']),
-                    '-pe', '{0}'.format(VASPRC['queue.pe']), '{0}'.format(VASPRC['queue.nprocs'])]
+                    '-pe', '{0}'.format(VASPRC['queue.pe']), '{0}'.format(VASPRC['queue.slot'])]
 
         cmdlist += [qscript]
-
         log.debug('{0}'.format(' '.join(cmdlist)))
         p = subprocess.Popen(cmdlist,
                              stdin=subprocess.PIPE,
@@ -256,13 +252,15 @@ runvasp.py     # this is the vasp command
                              stderr=subprocess.PIPE,
                              universal_newlines=True)
 
+
+
         log.debug(script)
         out, err = p.communicate()
 
     if out == '' or err != '':
         raise Exception('something went wrong in qsub:\n\n{0}'.format(err))
 
-    if VASPRC['scheduler'] == 'SGE':    
+    if VASPRC['scheduler'] == 'OGE':
         jobid = out.split()[2]
     else:
         jobid = out.strip()
@@ -273,7 +271,7 @@ runvasp.py     # this is the vasp command
                                                   jobid))
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def set_memory(self,
                eff_loss=0.1):
     """ Sets the recommended memory needed for a VASP calculation
@@ -392,7 +390,7 @@ def set_memory(self,
     return memory
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def qdel(self, *options):
     """Delete job from the queue.
 
@@ -416,7 +414,7 @@ def qdel(self, *options):
     return '{} not in queue.'.format(self.directory)
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def qstat(self, *options):
     """Get queue status of the job.
 
@@ -439,7 +437,7 @@ def qstat(self, *options):
         print(('{} not in queue.'.format(self.directory)))
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def qalter(self, *options):
     """Run qalter on the jobid.
 
@@ -457,7 +455,7 @@ def qalter(self, *options):
     return status, output
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def xterm(self):
     """Open an xterm in the calculator directory."""
 
@@ -465,7 +463,7 @@ def xterm(self):
     os.system(cmd)
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def qoutput(self):
     """Print job output from the queue."""
     jobid = self.jobid()
@@ -486,7 +484,7 @@ def torque(cls):
     The jobid runs qstat on the job_status
     qdel will delete the job from the queue.
     """
-    jobids = [calc.jobid() for calc in vasp.Vasp.calculators]
+    jobids = [calc.jobid() for calc in Vasp.calculators]
 
     qstat = ['[[shell:qstat {}][{}]]'.format(jobid, jobid)
              for jobid in jobids]
@@ -494,7 +492,7 @@ def torque(cls):
             for jobid in jobids]
 
     dirs = [calc.directory
-            for calc in vasp.Vasp.calculators]
+            for calc in Vasp.calculators]
 
     s = '[[shell:xterm -e "cd {}; ls && /bin/bash"][{}]]'
     xterm = [s.format(d, os.path.relpath(d))
@@ -507,4 +505,4 @@ def torque(cls):
     return '\n'.join(['| {0} {1} | {2} | {3} |'.format(xt, dd, qs, qd)
                       for xt, qs, qd, dd in zip(xterm, qstat, qdel, dired)])
 
-vasp.Vasp.torque = classmethod(torque)
+Vasp.torque = classmethod(torque)

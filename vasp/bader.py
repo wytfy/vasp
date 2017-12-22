@@ -1,12 +1,13 @@
 import os
 import numpy as np
 from subprocess import Popen, PIPE
-from . import vasp
+import vasp
+from .vasp import Vasp
 from .POTCAR import get_ZVAL
 from .monkeypatch import monkeypatch_class
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def chgsum(self):
     """Uses the chgsum.pl utility to sum over the AECCAR0 and AECCAR2 files."""
     cwd = os.getcwd()
@@ -15,11 +16,7 @@ def chgsum(self):
         cmdlist = ['chgsum.pl',
                    'AECCAR0',
                    'AECCAR2']
-        p = Popen(cmdlist,
-                  stdin=PIPE,
-                  stdout=PIPE,
-                  stderr=PIPE,
-                  universal_newlines=True)
+        p = Popen(cmdlist, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
         if out == '' or err != '':
             raise Exception('Cannot perform chgsum:\n\n{0}'.format(err))
@@ -27,7 +24,7 @@ def chgsum(self):
         os.chdir(cwd)
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def bader(self, cmd=None, ref=False, verbose=False, overwrite=False):
     """Performs bader analysis for a calculation.
     Follows defaults unless full shell command is specified
@@ -58,16 +55,12 @@ def bader(self, cmd=None, ref=False, verbose=False, overwrite=False):
         elif type(cmd) is list:
             cmdlist = cmd
 
-        p = Popen(cmdlist,
-                  stdin=PIPE,
-                  stdout=PIPE,
-                  stderr=PIPE,
-                  universal_newlines=True)
+        p = Popen(cmdlist, stdin=PIPE, stdout=PIPE, stderr=PIPE)
         out, err = p.communicate()
         if out == '' or err != '':
             raise Exception('Cannot perform Bader:\n\n{0}'.format(err))
         elif verbose:
-            print(('Bader completed for {0}'.format(self.directory)))
+            print('Bader completed for {0}'.format(self.directory))
 
         # Now store the calculated charges
         self._get_calculated_charges()
@@ -76,7 +69,7 @@ def bader(self, cmd=None, ref=False, verbose=False, overwrite=False):
         os.chdir(cwd)
 
 
-@monkeypatch_class(vasp.Vasp)
+@monkeypatch_class(Vasp)
 def _get_calculated_charges(self,
                             atoms=None,
                             fileobj='ACF.dat',
@@ -155,7 +148,8 @@ def _get_calculated_charges(self,
             if displacement is not None:
                 # check if the atom positions match
                 xyz = np.array([float(w) for w in words[1:4]])
-                assert np.linalg.norm(positions[int(words[0]) - 1] - xyz) < displacement
+                assert (np.linalg.norm(positions[int(words[0]) - 1] - xyz) <
+                        displacement)
         i += 1
 
     if f_open:
